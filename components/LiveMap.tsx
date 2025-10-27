@@ -116,15 +116,29 @@ export default function LiveMap() {
     const addPlannedRoutesToMap = () => {
       if (!map.current) return;
 
-      // Remove existing planned routes if any
-      ['planned-route-completed', 'planned-route-today', 'planned-route-future'].forEach(layerId => {
-        if (map.current!.getLayer(layerId)) {
-          map.current!.removeLayer(layerId);
+      // Remove ALL existing planned route layers and sources
+      const existingLayers = map.current.getStyle()?.layers || [];
+      const existingSources = Object.keys(map.current.getStyle()?.sources || {});
+
+      // Remove all stage-related layers
+      existingLayers.forEach((layer: any) => {
+        if (layer.id.startsWith('planned-route-') || layer.id.startsWith('stage-route-')) {
+          try {
+            map.current!.removeLayer(layer.id);
+          } catch (e) {
+            console.warn(`Could not remove layer ${layer.id}:`, e);
+          }
         }
       });
-      ['planned-completed', 'planned-today', 'planned-future'].forEach(sourceId => {
-        if (map.current!.getSource(sourceId)) {
-          map.current!.removeSource(sourceId);
+
+      // Remove all stage-related sources
+      existingSources.forEach((sourceId: string) => {
+        if (sourceId.startsWith('planned-') || sourceId.startsWith('stage-')) {
+          try {
+            map.current!.removeSource(sourceId);
+          } catch (e) {
+            console.warn(`Could not remove source ${sourceId}:`, e);
+          }
         }
       });
 
@@ -145,6 +159,11 @@ export default function LiveMap() {
           return false;
         }
 
+        if (stage.route_coordinates.length < 2) {
+          console.warn(`Stage "${stage.name}" (${stage.date}) has less than 2 coordinates (${stage.route_coordinates.length})`);
+          return false;
+        }
+
         // Validate that coordinates have required properties
         const firstCoord = stage.route_coordinates[0];
         if (!firstCoord || typeof firstCoord.lon !== 'number' || typeof firstCoord.lat !== 'number') {
@@ -152,147 +171,144 @@ export default function LiveMap() {
           return false;
         }
 
+        // Validate all coordinates are valid numbers
+        const allValid = stage.route_coordinates.every((coord: any) => {
+          return coord && 
+                 typeof coord.lon === 'number' && 
+                 typeof coord.lat === 'number' &&
+                 !isNaN(coord.lon) && 
+                 !isNaN(coord.lat) &&
+                 coord.lon >= -180 && coord.lon <= 180 &&
+                 coord.lat >= -90 && coord.lat <= 90;
+        });
+
+        if (!allValid) {
+          console.warn(`Stage "${stage.name}" (${stage.date}) has some invalid coordinates`);
+          return false;
+        }
+
         return true;
       };
 
-      // Categorize stages with validation
-      const completedStages = stages.filter(s => s.date < today && hasValidRouteCoordinates(s));
-      const todayStages = stages.filter(s => s.date === today && hasValidRouteCoordinates(s));
-      const futureStages = stages.filter(s => s.date > today && hasValidRouteCoordinates(s));
+      // Helper function to add a single stage route
+      const addStageRoute = (stage: Stage, category: 'completed' | 'today' | 'future', index: number) => {
+        if (!map.current) return false;
 
-      console.log(`Stages categorized - Completed: ${completedStages.length}, Today: ${todayStages.length}, Future: ${futureStages.length}`);
-
-      // Add completed routes (gray/green)
-      if (completedStages.length > 0) {
         try {
-          const completedCoordinates = completedStages.flatMap(stage => 
-            stage.route_coordinates.map((coord: any) => [coord.lon, coord.lat])
-          );
+          // Create unique IDs for this stage
+          const sourceId = `stage-${category}-${stage.id}-${index}`;
+          const layerId = `stage-route-${category}-${stage.id}-${index}`;
 
-          if (completedCoordinates.length > 0) {
-            map.current!.addSource('planned-completed', {
-              type: 'geojson',
-              data: {
-                type: 'Feature',
-                properties: {},
-                geometry: {
-                  type: 'LineString',
-                  coordinates: completedCoordinates,
-                },
-              },
-            });
+          // Convert coordinates to Mapbox format
+          const coordinates = stage.route_coordinates.map((coord: any) => [coord.lon, coord.lat]);
 
-            map.current!.addLayer({
-              id: 'planned-route-completed',
-              type: 'line',
-              source: 'planned-completed',
-              layout: {
-                'line-join': 'round',
-                'line-cap': 'round',
+          // Add source for this stage
+          map.current.addSource(sourceId, {
+            type: 'geojson',
+            data: {
+              type: 'Feature',
+              properties: {
+                name: stage.name,
+                date: stage.date,
+                category: category,
               },
-              paint: {
-                'line-color': mapColors.routePlanned,
-                'line-width': 3,
-                'line-opacity': 0.6,
+              geometry: {
+                type: 'LineString',
+                coordinates: coordinates,
               },
-            });
-            console.log(`Added ${completedStages.length} completed stage routes to map`);
+            },
+          });
+
+          // Determine style based on category
+          let lineColor: string = mapColors.routePlanned;
+          let lineWidth = 3;
+          let lineOpacity = 0.6;
+          let lineDasharray: number[] | undefined = undefined;
+
+          if (category === 'today') {
+            lineColor = mapColors.routeCompleted;
+            lineWidth = 4;
+            lineOpacity = 0.8;
+          } else if (category === 'future') {
+            lineColor = mapColors.routeGpx;
+            lineWidth = 3;
+            lineOpacity = 0.7;
+            lineDasharray = [2, 2];
           }
+
+          // Add layer for this stage
+          map.current.addLayer({
+            id: layerId,
+            type: 'line',
+            source: sourceId,
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round',
+            },
+            paint: {
+              'line-color': lineColor,
+              'line-width': lineWidth,
+              'line-opacity': lineOpacity,
+              ...(lineDasharray && { 'line-dasharray': lineDasharray }),
+            },
+          });
+
+          console.log(`✅ Added ${category} stage route: "${stage.name}" (${stage.date}) with ${coordinates.length} points`);
+          return true;
         } catch (error) {
-          console.error('Error adding completed routes to map:', error);
+          console.error(`❌ Error adding ${category} stage "${stage.name}" (${stage.date}):`, error);
+          return false;
         }
-      }
+      };
 
-      // Add today's route (orange/yellow)
-      if (todayStages.length > 0) {
-        try {
-          const todayCoordinates = todayStages.flatMap(stage => 
-            stage.route_coordinates.map((coord: any) => [coord.lon, coord.lat])
-          );
+      // Categorize and add stages individually
+      let completedCount = 0;
+      let todayCount = 0;
+      let futureCount = 0;
+      let failedCount = 0;
 
-          if (todayCoordinates.length > 0) {
-            map.current!.addSource('planned-today', {
-              type: 'geojson',
-              data: {
-                type: 'Feature',
-                properties: {},
-                geometry: {
-                  type: 'LineString',
-                  coordinates: todayCoordinates,
-                },
-              },
-            });
-
-            map.current!.addLayer({
-              id: 'planned-route-today',
-              type: 'line',
-              source: 'planned-today',
-              layout: {
-                'line-join': 'round',
-                'line-cap': 'round',
-              },
-              paint: {
-                'line-color': mapColors.routeCompleted,
-                'line-width': 4,
-                'line-opacity': 0.8,
-              },
-            });
-            console.log(`Added ${todayStages.length} today's stage routes to map`);
-          }
-        } catch (error) {
-          console.error('Error adding today\'s routes to map:', error);
+      stages.forEach((stage, index) => {
+        if (!hasValidRouteCoordinates(stage)) {
+          failedCount++;
+          return;
         }
-      }
 
-      // Add future routes (blue dashed)
-      if (futureStages.length > 0) {
-        try {
-          const futureCoordinates = futureStages.flatMap(stage => 
-            stage.route_coordinates.map((coord: any) => [coord.lon, coord.lat])
-          );
-
-          if (futureCoordinates.length > 0) {
-            map.current!.addSource('planned-future', {
-              type: 'geojson',
-              data: {
-                type: 'Feature',
-                properties: {},
-                geometry: {
-                  type: 'LineString',
-                  coordinates: futureCoordinates,
-                },
-              },
-            });
-
-            map.current!.addLayer({
-              id: 'planned-route-future',
-              type: 'line',
-              source: 'planned-future',
-              layout: {
-                'line-join': 'round',
-                'line-cap': 'round',
-              },
-              paint: {
-                'line-color': mapColors.routeGpx,
-                'line-width': 3,
-                'line-opacity': 0.7,
-                'line-dasharray': [2, 2],
-              },
-            });
-            console.log(`Added ${futureStages.length} future stage routes to map`);
-          }
-        } catch (error) {
-          console.error('Error adding future routes to map:', error);
+        let category: 'completed' | 'today' | 'future';
+        if (stage.date < today) {
+          category = 'completed';
+        } else if (stage.date === today) {
+          category = 'today';
+        } else {
+          category = 'future';
         }
-      }
+
+        const success = addStageRoute(stage, category, index);
+        
+        if (success) {
+          if (category === 'completed') completedCount++;
+          else if (category === 'today') todayCount++;
+          else if (category === 'future') futureCount++;
+        } else {
+          failedCount++;
+        }
+      });
+
+      console.log(`📊 Stage routes summary - Completed: ${completedCount}, Today: ${todayCount}, Future: ${futureCount}, Failed: ${failedCount}, Total: ${stages.length}`);
     };
 
-    // If map is already loaded, add routes immediately
-    if (map.current.loaded()) {
+    // Ensure map is fully loaded before adding routes
+    if (map.current.loaded() && map.current.isStyleLoaded()) {
       addPlannedRoutesToMap();
     } else {
-      // Wait for map to load before adding routes
-      map.current.once('load', addPlannedRoutesToMap);
+      // Wait for both map and style to be fully loaded
+      const loadHandler = () => {
+        if (map.current && map.current.loaded() && map.current.isStyleLoaded()) {
+          addPlannedRoutesToMap();
+        }
+      };
+
+      map.current.once('load', loadHandler);
+      map.current.once('styledata', loadHandler);
     }
   };
 
