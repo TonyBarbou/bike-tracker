@@ -19,11 +19,13 @@ interface Post {
   id: number;
   title: string;
   content: string;
-  latitude: number | null;
-  longitude: number | null;
-  location_name: string | null;
-  images: string[];
-  created_at: string;
+  latitude?: number;
+  longitude?: number;
+  location_name?: string;
+  images?: string[];
+  created_at: number;
+  stage_date: string | null;
+  time_of_day: string | null;
 }
 
 interface Stage {
@@ -31,17 +33,42 @@ interface Stage {
   date: string;
   day_number: number | null;
   name: string;
-  route_coordinates: any[];
-  status: string;
+  planned_distance_km: number;
+  planned_elevation_gain_m: number;
+  start_location: string | null;
+  end_location: string | null;
+  notes: string | null;
+  route_coordinates?: any[];
 }
 
-export default function LiveMap() {
+interface DayData {
+  stage: Stage | null;
+  posts: Post[];
+  isToday: boolean;
+  isPast: boolean;
+  isFuture: boolean;
+}
+
+interface LiveMapProps {
+  selectedDay?: string | null;
+  selectedPost?: Post | null;
+  onPostClick?: (post: Post) => void;
+  dayData?: DayData[];
+}
+
+export default function LiveMap({ 
+  selectedDay = null, 
+  selectedPost = null, 
+  onPostClick,
+  dayData = []
+}: LiveMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
   const postMarkersRef = useRef<mapboxgl.Marker[]>([]);
   const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [stages, setStages] = useState<Stage[]>([]);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -83,28 +110,108 @@ export default function LiveMap() {
     };
   }, []);
 
+  // Handle selected day changes - fit map to show full stage route
+  useEffect(() => {
+    if (!map.current || !selectedDay || dayData.length === 0) return;
+
+    const selectedDayData = dayData.find(d => d.stage?.date === selectedDay);
+    if (!selectedDayData) return;
+
+    // If stage has route coordinates, fit bounds to show entire route
+    if (selectedDayData.stage?.route_coordinates && selectedDayData.stage.route_coordinates.length > 0) {
+      const coords = selectedDayData.stage.route_coordinates;
+      
+      // Calculate bounds of the route
+      const bounds = new mapboxgl.LngLatBounds();
+      
+      // Add all route coordinates
+      coords.forEach((c: any) => {
+        bounds.extend([c.lon, c.lat]);
+      });
+      
+      // If viewing today's route and we have a current location, include it in bounds
+      const today = new Date().toISOString().split('T')[0];
+      if (selectedDayData.stage.date === today && currentLocation) {
+        bounds.extend([currentLocation.longitude, currentLocation.latitude]);
+      }
+      
+      // Fit map to show entire route with generous padding to ensure both start and end are visible
+      map.current.fitBounds(bounds, {
+        padding: { top: 80, bottom: 80, left: 80, right: 80 },
+        maxZoom: 14, // Allow closer zoom for shorter routes, but not too close
+        duration: 1000,
+        essential: true,
+      });
+      return;
+    }
+
+    // Fallback: if there are posts for this day, center on the first post
+    if (selectedDayData.posts.length > 0) {
+      const firstPost = selectedDayData.posts[0];
+      if (firstPost.latitude != null && firstPost.longitude != null) {
+        map.current.flyTo({
+          center: [firstPost.longitude, firstPost.latitude],
+          zoom: 12,
+          essential: true,
+          duration: 1000,
+        });
+      }
+    }
+  }, [selectedDay, dayData, currentLocation]);
+
+  // Handle selected post changes - center map on the specific post
+  useEffect(() => {
+    if (!map.current || !selectedPost) return;
+
+    if (selectedPost.latitude != null && selectedPost.longitude != null) {
+      map.current.flyTo({
+        center: [selectedPost.longitude, selectedPost.latitude],
+        zoom: 13,
+        essential: true,
+      });
+
+      // Find and open the popup for this post
+      const existingMarker = postMarkersRef.current.find((marker: any) => {
+        const lngLat = marker.getLngLat();
+        return lngLat.lng === selectedPost.longitude && lngLat.lat === selectedPost.latitude;
+      });
+
+      if (existingMarker) {
+        existingMarker.togglePopup();
+      }
+    }
+  }, [selectedPost]);
+
   const fetchLocationData = async () => {
     try {
       // Fetch current location
+      let location: Location | null = null;
       const currentRes = await fetch('/api/location');
       if (currentRes.ok) {
-        const location = await currentRes.json();
+        location = await currentRes.json();
         setCurrentLocation(location);
-        updateMarker(location);
+      }
+
+      // Fetch and display planned routes first to get stages data
+      const stagesRes = await fetch('/api/stages');
+      let fetchedStages: Stage[] = [];
+      if (stagesRes.ok) {
+        fetchedStages = await stagesRes.json();
+        setStages(fetchedStages);
+        drawPlannedRoutes(fetchedStages);
       }
 
       // Fetch location history for route
       const historyRes = await fetch('/api/location/history');
       if (historyRes.ok) {
         const history = await historyRes.json();
-        drawRoute(history);
-      }
-
-      // Fetch and display planned routes
-      const stagesRes = await fetch('/api/stages');
-      if (stagesRes.ok) {
-        const stages = await stagesRes.json();
-        drawPlannedRoutes(stages);
+        // Filter to only show today's locations
+        const todayLocations = filterTodayLocations(history);
+        drawRoute(todayLocations);
+        // Update marker and fit bounds to show full day trace
+        if (location) {
+          updateMarkerWithDayTrace(location, todayLocations, fetchedStages);
+        }
       }
 
       // Fetch and display posts
@@ -116,6 +223,15 @@ export default function LiveMap() {
     } catch (error) {
       console.error('Error fetching location data:', error);
     }
+  };
+
+  // Filter locations to only include today's data (from midnight to now)
+  const filterTodayLocations = (locations: Location[]): Location[] => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayStartTimestamp = Math.floor(todayStart.getTime() / 1000);
+    
+    return locations.filter(loc => loc.timestamp >= todayStartTimestamp);
   };
 
   const drawPlannedRoutes = (stages: Stage[]) => {
@@ -210,7 +326,7 @@ export default function LiveMap() {
           const layerId = `stage-route-${category}-${stage.id}-${index}`;
 
           // Convert coordinates to Mapbox format
-          const coordinates = stage.route_coordinates.map((coord: any) => [coord.lon, coord.lat]);
+          const coordinates = stage.route_coordinates!.map((coord: any) => [coord.lon, coord.lat]);
 
           // Add source for this stage
           map.current.addSource(sourceId, {
@@ -329,14 +445,14 @@ export default function LiveMap() {
 
     // Filter posts that have coordinates
     const postsWithCoordinates = posts.filter(
-      post => post.latitude !== null && post.longitude !== null
+      post => post.latitude != null && post.longitude != null
     );
 
     const addPostMarkers = () => {
       if (!map.current) return;
 
       postsWithCoordinates.forEach(post => {
-        if (post.latitude === null || post.longitude === null) return;
+        if (post.latitude == null || post.longitude == null) return;
 
         const coordinates: [number, number] = [post.longitude, post.latitude];
 
@@ -390,6 +506,13 @@ export default function LiveMap() {
           });
         });
 
+        // Add click handler to notify parent component
+        el.addEventListener('click', () => {
+          if (onPostClick) {
+            onPostClick(post);
+          }
+        });
+
         const marker = new mapboxgl.Marker(el)
           .setLngLat(coordinates)
           .setPopup(popup)
@@ -408,7 +531,7 @@ export default function LiveMap() {
     }
   };
 
-  const updateMarker = (location: Location) => {
+  const updateMarkerWithDayTrace = (location: Location, todayLocations: Location[], stagesData: Stage[]) => {
     if (!map.current) return;
 
     const coordinates: [number, number] = [location.longitude, location.latitude];
@@ -445,12 +568,49 @@ export default function LiveMap() {
       )
       .addTo(map.current);
 
-    // Center map on current location
-    map.current.flyTo({
-      center: coordinates,
-      zoom: 12,
-      essential: true,
-    });
+    // Dynamic view: Show current position, start point, and planned end point
+    const bounds = new mapboxgl.LngLatBounds();
+    
+    // Always include current position
+    bounds.extend(coordinates);
+    
+    // Include start point of the day (first location)
+    if (todayLocations.length > 0) {
+      const startPoint = todayLocations[0];
+      bounds.extend([startPoint.longitude, startPoint.latitude]);
+    }
+    
+    // Try to include planned end point from today's stage
+    const today = new Date().toISOString().split('T')[0];
+    const todayStage = stagesData.find(s => s.date === today);
+    
+    if (todayStage?.route_coordinates && todayStage.route_coordinates.length > 0) {
+      // Get the last coordinate from the planned route (end point)
+      const endPoint = todayStage.route_coordinates[todayStage.route_coordinates.length - 1];
+      if (endPoint && typeof endPoint.lon === 'number' && typeof endPoint.lat === 'number') {
+        bounds.extend([endPoint.lon, endPoint.lat]);
+        console.log(`📍 Including planned end point from stage: ${todayStage.name}`);
+      }
+    }
+    
+    // Fit the map to show all key points (current, start, planned end)
+    // Check if we have at least 2 points to create valid bounds
+    if (!bounds.isEmpty()) {
+      map.current.fitBounds(bounds, {
+        padding: { top: 100, bottom: 100, left: 100, right: 100 },
+        maxZoom: 14, // Don't zoom in too close even if points are near each other
+        duration: 1000,
+        essential: true,
+      });
+    } else {
+      // Fallback: just center on current position if no other points available
+      map.current.flyTo({
+        center: coordinates,
+        zoom: 10,
+        essential: true,
+        duration: 1000,
+      });
+    }
   };
 
   const drawRoute = (locations: Location[]) => {
@@ -507,37 +667,39 @@ export default function LiveMap() {
 
   return (
     <>
-      <div className="relative w-full h-[600px] rounded-lg overflow-hidden shadow-xl">
+      <div className="relative w-full h-full md:h-[600px] md:rounded-l-lg overflow-hidden md:shadow-xl">
         <div ref={mapContainer} className="w-full h-full" />
       {currentLocation && (
-        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm p-4 rounded-lg shadow-lg min-w-[200px]">
-          <h3 className="font-bold text-sm mb-3 text-gray-900">📍 Position en direct</h3>
-          <div className="space-y-1 text-xs">
+        <div className="absolute top-4 left-4 md:top-auto md:bottom-4 md:left-4 bg-white/95 backdrop-blur-sm p-2 md:p-4 rounded-lg shadow-lg md:min-w-[200px]">
+          <h3 className="hidden md:inline font-bold text-xs md:text-sm mb-2 md:mb-3 text-gray-900">
+            <span className="hidden md:inline">📍 Position en direct</span>
+          </h3>
+          <div className="space-y-0.5 md:space-y-1 text-xs">
             {currentLocation.speed !== undefined && currentLocation.speed !== null && (
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Vitesse:</span>
-                <span className="font-semibold text-gray-900">{Math.round(currentLocation.speed * 3.6)} km/h</span>
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-gray-600">
+                  <span className="md:hidden" title="Speed">🚴</span>
+                  <span className="hidden md:inline">Vitesse:</span>
+                </span>
+                <span className="font-semibold text-gray-900 text-[11px] md:text-xs">{Math.round(currentLocation.speed * 3.6)} km/h</span>
               </div>
             )}
             {currentLocation.altitude !== undefined && currentLocation.altitude !== null && (
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Altitude:</span>
-                <span className="font-semibold text-gray-900">{Math.round(currentLocation.altitude)}m</span>
-              </div>
-            )}
-            {currentLocation.battery !== undefined && currentLocation.battery !== null && (
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Batterie:</span>
-                <span className="font-semibold text-gray-900">{currentLocation.battery}%</span>
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-gray-600">
+                  <span className="md:hidden" title="Altitude">⛰️</span>
+                  <span className="hidden md:inline">Altitude:</span>
+                </span>
+                <span className="font-semibold text-gray-900 text-[11px] md:text-xs">{Math.round(currentLocation.altitude)}m</span>
               </div>
             )}
             {currentLocation.accuracy !== undefined && currentLocation.accuracy !== null && (
-              <div className="flex justify-between items-center">
+              <div className="hidden md:flex justify-between items-center gap-2">
                 <span className="text-gray-600">Précision:</span>
-                <span className="font-semibold text-gray-900">{Math.round(currentLocation.accuracy)}m</span>
+                <span className="font-semibold text-gray-900 text-xs">{Math.round(currentLocation.accuracy)}m</span>
               </div>
             )}
-            <div className="pt-2 mt-2 border-t border-gray-200">
+            <div className="hidden md:block pt-2 mt-2 border-t border-gray-200">
               <div className="mb-2">
                 <p className="text-gray-700 font-semibold text-[10px] mb-1">Légende:</p>
                 <div className="space-y-0.5">
