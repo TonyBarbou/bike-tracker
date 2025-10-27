@@ -99,7 +99,7 @@ export default function LiveMap() {
               <p style="margin: 4px 0; font-size: 14px;">
                 ${location.speed ? `Speed: ${Math.round(location.speed * 3.6)} km/h<br>` : ''}
                 ${location.altitude ? `Altitude: ${Math.round(location.altitude)}m<br>` : ''}
-                Time: ${new Date(location.timestamp * 1000).toLocaleString()}
+                Time: ${location.timestamp ? new Date(location.timestamp * 1000).toLocaleString() : 'N/A'}
               </p>
             </div>
           `)
@@ -207,7 +207,7 @@ export default function LiveMap() {
             {currentLocation.altitude && (
               <>Altitude: {Math.round(currentLocation.altitude)}m<br /></>
             )}
-            Updated: {new Date(currentLocation.timestamp * 1000).toLocaleTimeString()}
+            Updated: {currentLocation.timestamp ? new Date(currentLocation.timestamp * 1000).toLocaleTimeString() : 'N/A'}
           </p>
         </div>
       )}

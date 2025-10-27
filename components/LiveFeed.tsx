@@ -76,8 +76,8 @@ export default function LiveFeed() {
                 </p>
               )}
             </div>
-            <time className="text-sm text-gray-500" dateTime={new Date(post.created_at * 1000).toISOString()}>
-              {formatDistanceToNow(new Date(post.created_at * 1000), { addSuffix: true })}
+            <time className="text-sm text-gray-500" dateTime={typeof post.created_at === 'string' ? post.created_at : new Date(post.created_at * 1000).toISOString()}>
+              {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
             </time>
           </div>
           
@@ -99,7 +99,7 @@ export default function LiveFeed() {
           )}
 
           <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500">
-            Posted on {new Date(post.created_at * 1000).toLocaleDateString('en-US', { 
+            Posted on {new Date(post.created_at).toLocaleDateString('en-US', { 
               year: 'numeric', 
               month: 'long', 
               day: 'numeric',
