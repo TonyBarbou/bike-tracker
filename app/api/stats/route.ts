@@ -4,7 +4,7 @@ import { getTripStatistics } from '@/lib/db';
 // GET - Retrieve trip statistics
 export async function GET() {
   try {
-    const stats = getTripStatistics();
+    const stats = await getTripStatistics();
     
     return NextResponse.json(stats);
   } catch (error) {
