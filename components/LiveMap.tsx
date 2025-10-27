@@ -61,14 +61,24 @@ export default function LiveMap() {
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
     map.current.addControl(new mapboxgl.FullscreenControl(), 'top-right');
 
-    // Fetch and display location data
-    fetchLocationData();
+    // Wait for map to be fully loaded before fetching data
+    map.current.on('load', () => {
+      console.log('🗺️ Map fully loaded, fetching location data...');
+      
+      // Fetch and display location data only after map is ready
+      fetchLocationData();
 
-    // Set up interval to refresh location every 30 seconds
-    const interval = setInterval(fetchLocationData, 30000);
+      // Set up interval to refresh location every 30 seconds
+      const interval = setInterval(fetchLocationData, 30000);
+      
+      // Store interval ID for cleanup
+      (map.current as any)._refreshInterval = interval;
+    });
 
     return () => {
-      clearInterval(interval);
+      if (map.current && (map.current as any)._refreshInterval) {
+        clearInterval((map.current as any)._refreshInterval);
+      }
       map.current?.remove();
     };
   }, []);
@@ -296,19 +306,17 @@ export default function LiveMap() {
       console.log(`📊 Stage routes summary - Completed: ${completedCount}, Today: ${todayCount}, Future: ${futureCount}, Failed: ${failedCount}, Total: ${stages.length}`);
     };
 
-    // Ensure map is fully loaded before adding routes
-    if (map.current.loaded() && map.current.isStyleLoaded()) {
-      addPlannedRoutesToMap();
+    // Ensure map AND style are fully loaded before adding routes
+    // This is critical for reliability - layers can only be added when style is ready
+    if (!map.current.isStyleLoaded()) {
+      console.log('⏳ Waiting for map style to load before adding stage routes...');
+      map.current.once('styledata', () => {
+        console.log('✅ Map style loaded, adding stage routes now');
+        addPlannedRoutesToMap();
+      });
     } else {
-      // Wait for both map and style to be fully loaded
-      const loadHandler = () => {
-        if (map.current && map.current.loaded() && map.current.isStyleLoaded()) {
-          addPlannedRoutesToMap();
-        }
-      };
-
-      map.current.once('load', loadHandler);
-      map.current.once('styledata', loadHandler);
+      // Style is already loaded, add routes immediately
+      addPlannedRoutesToMap();
     }
   };
 
