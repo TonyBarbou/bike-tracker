@@ -60,22 +60,22 @@ export default function StatsPanel() {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       <StatCard
-        label="Total Distance"
+        label="Distance Parcourue"
         value={`${(stats?.totalDistance || 0).toFixed(1)} km`}
         icon="🚴"
       />
       <StatCard
-        label="Days on Road"
+        label="Jours sur la route"
         value={(stats?.daysOnRoad || 0).toString()}
         icon="📅"
       />
       <StatCard
-        label="Elevation Gain"
+        label="Dénivelé"
         value={`${(stats?.totalElevationGain || 0).toLocaleString()} m`}
         icon="⛰️"
       />
       <StatCard
-        label="Avg Speed"
+        label="Vitesse Moyenne"
         value={`${(stats?.averageSpeed || 0).toFixed(1)} km/h`}
         icon="⚡"
       />

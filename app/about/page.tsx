@@ -10,7 +10,7 @@ export default function AboutPage() {
       <header className="bg-gradient-to-r from-red-600 to-orange-600 text-white py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <Link href="/" className="text-white/80 hover:text-white mb-4 inline-block">
-            ← Back to Tracker
+            ← Retourner à la page principale
           </Link>
           <h1 className="text-4xl font-bold">About Our Journey</h1>
         </div>

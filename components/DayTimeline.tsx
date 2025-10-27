@@ -109,12 +109,35 @@ export default function DayTimeline() {
           });
         });
 
-        // Convert to array and sort by date (newest first, but stages in order)
+        // Convert to array and sort: today first, then past (newest to oldest), then future (oldest to newest)
         const sortedDays = Array.from(daysMap.entries())
           .sort((a, b) => {
+            // Always put 'no-stage' at the end
             if (a[0] === 'no-stage') return 1;
             if (b[0] === 'no-stage') return -1;
-            return b[0].localeCompare(a[0]); // Reverse chronological
+            
+            const aData = a[1];
+            const bData = b[1];
+            
+            // Today comes first
+            if (aData.isToday && !bData.isToday) return -1;
+            if (!aData.isToday && bData.isToday) return 1;
+            
+            // Both are past - sort reverse chronological (newest first)
+            if (aData.isPast && bData.isPast) {
+              return b[0].localeCompare(a[0]);
+            }
+            
+            // Both are future - sort chronological (oldest/nearest first)
+            if (aData.isFuture && bData.isFuture) {
+              return a[0].localeCompare(b[0]);
+            }
+            
+            // Past comes before future
+            if (aData.isPast && bData.isFuture) return -1;
+            if (aData.isFuture && bData.isPast) return 1;
+            
+            return 0;
           })
           .map(([_, data]) => data);
 
@@ -144,10 +167,28 @@ export default function DayTimeline() {
   return (
     <>
       <div className="space-y-6">
-        {dayData.map((day, idx) => (
-          <div key={idx} className={`bg-white rounded-lg shadow-lg overflow-hidden ${
-            day.isToday ? 'ring-4 ring-orange-400' : ''
-          }`}>
+        {dayData.map((day, idx) => {
+          // Check if this is the first upcoming day to add a separator
+          const isFirstUpcoming = day.isFuture && (idx === 0 || !dayData[idx - 1]?.isFuture);
+          
+          return (
+            <div key={idx}>
+              {/* Upcoming Days Section Header */}
+              {isFirstUpcoming && (
+                <div className="bg-blue-100 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg">
+                  <h2 className="text-xl font-bold text-blue-900 flex items-center gap-2">
+                    <span>📅</span>
+                    <span>Upcoming Days</span>
+                  </h2>
+                  <p className="text-sm text-blue-700 mt-1">
+                    These stages are scheduled for the coming days
+                  </p>
+                </div>
+              )}
+              
+              <div className={`bg-white rounded-lg shadow-lg overflow-hidden ${
+                day.isToday ? 'ring-4 ring-orange-400' : ''
+              }`}>
             {/* Stage Header */}
             {day.stage && (
               <div className={`p-6 ${
@@ -172,7 +213,7 @@ export default function DayTimeline() {
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
                   <div className="bg-white/50 p-3 rounded">
                     <span className="text-gray-600 block">📏 Distance</span>
                     <span className="font-bold text-lg">{day.stage.planned_distance_km} km</span>
@@ -181,12 +222,6 @@ export default function DayTimeline() {
                     <span className="text-gray-600 block">⛰️ Elevation</span>
                     <span className="font-bold text-lg">{day.stage.planned_elevation_gain_m} m</span>
                   </div>
-                  {day.stage.start_location && (
-                    <div className="bg-white/50 p-3 rounded col-span-2">
-                      <span className="text-gray-600 block text-xs">Route</span>
-                      <span className="font-semibold text-sm">{day.stage.start_location} → {day.stage.end_location}</span>
-                    </div>
-                  )}
                 </div>
 
                 {day.stage.notes && (
@@ -200,7 +235,11 @@ export default function DayTimeline() {
               <div className="p-6 space-y-6">
                 {day.posts.map(post => {
                   // Get display time - use time_of_day if set, otherwise extract from created_at
-                  const displayTime = post.time_of_day || (() => {
+                  const displayTime = (() => {
+                    if (post.time_of_day) {
+                      // Strip seconds if present (e.g., "14:30:00" -> "14:30")
+                      return post.time_of_day.substring(0, 5);
+                    }
                     const createdDate = new Date(post.created_at);
                     const hours = createdDate.getHours().toString().padStart(2, '0');
                     const minutes = createdDate.getMinutes().toString().padStart(2, '0');
@@ -232,9 +271,6 @@ export default function DayTimeline() {
                                 </p>
                               )}
                             </div>
-                            <time className="text-sm text-gray-500 whitespace-nowrap ml-4" dateTime={new Date(post.created_at).toISOString()}>
-                              {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-                            </time>
                           </div>
                           
                           <div className="prose prose-sm max-w-none text-gray-700 mb-4">
@@ -254,16 +290,6 @@ export default function DayTimeline() {
                               ))}
                             </div>
                           )}
-
-                          <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500">
-                            Posted on {new Date(post.created_at).toLocaleDateString('en-US', { 
-                              year: 'numeric', 
-                              month: 'long', 
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </div>
                         </div>
                       </div>
                     </article>
@@ -306,8 +332,10 @@ export default function DayTimeline() {
                 </div>
               </div>
             )}
-          </div>
-        ))}
+              </div>
+            </div>
+          );
+        })}
 
         {dayData.length === 0 && (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">

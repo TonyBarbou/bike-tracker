@@ -511,11 +511,11 @@ export default function LiveMap() {
         <div ref={mapContainer} className="w-full h-full" />
       {currentLocation && (
         <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm p-4 rounded-lg shadow-lg min-w-[200px]">
-          <h3 className="font-bold text-sm mb-3 text-gray-900">📍 Live Location</h3>
+          <h3 className="font-bold text-sm mb-3 text-gray-900">📍 Position en direct</h3>
           <div className="space-y-1 text-xs">
             {currentLocation.speed !== undefined && currentLocation.speed !== null && (
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Speed:</span>
+                <span className="text-gray-600">Vitesse:</span>
                 <span className="font-semibold text-gray-900">{Math.round(currentLocation.speed * 3.6)} km/h</span>
               </div>
             )}
@@ -527,35 +527,31 @@ export default function LiveMap() {
             )}
             {currentLocation.battery !== undefined && currentLocation.battery !== null && (
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Battery:</span>
+                <span className="text-gray-600">Batterie:</span>
                 <span className="font-semibold text-gray-900">{currentLocation.battery}%</span>
               </div>
             )}
             {currentLocation.accuracy !== undefined && currentLocation.accuracy !== null && (
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Accuracy:</span>
+                <span className="text-gray-600">Précision:</span>
                 <span className="font-semibold text-gray-900">{Math.round(currentLocation.accuracy)}m</span>
               </div>
             )}
             <div className="pt-2 mt-2 border-t border-gray-200">
               <div className="mb-2">
-                <p className="text-gray-700 font-semibold text-[10px] mb-1">Map Legend:</p>
+                <p className="text-gray-700 font-semibold text-[10px] mb-1">Légende:</p>
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-1.5">
-                    <div className="w-4 h-0.5 rounded" style={{ backgroundColor: mapColors.livePosition }}></div>
-                    <span className="text-gray-600 text-[9px]">Live Route</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
                     <div className="w-4 h-0.5 rounded" style={{ backgroundColor: mapColors.routeCompleted }}></div>
-                    <span className="text-gray-600 text-[9px]">Today's Route</span>
+                    <span className="text-gray-600 text-[9px]">Parcours du jour</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-4 h-0.5 rounded border-t-2 border-dashed" style={{ borderColor: mapColors.routeGpx }}></div>
-                    <span className="text-gray-600 text-[9px]">Future Routes</span>
+                    <span className="text-gray-600 text-[9px]">Parcours à venir</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-4 h-0.5 rounded opacity-60" style={{ backgroundColor: mapColors.routePlanned }}></div>
-                    <span className="text-gray-600 text-[9px]">Past Routes</span>
+                    <span className="text-gray-600 text-[9px]">Déjà parcouru</span>
                   </div>
                 </div>
               </div>

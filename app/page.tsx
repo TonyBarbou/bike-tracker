@@ -24,22 +24,22 @@ export default function Home() {
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-red-600 to-orange-600 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl font-bold mb-4">🚴‍♂️ Cycling Across Europe</h1>
-          <p className="text-xl mb-2">Follow our journey as we bike across Europe for charity</p>
-          <p className="text-lg opacity-90">Live tracking • Real-time updates • Every kilometer counts</p>
+          <h1 className="text-5xl font-bold mb-4">🚴‍♂️ En vélo vers le grand nord</h1>
+          <p className="text-xl mb-2">Suivez-nous en direct en direction du grand nord</p>
+          <p className="text-lg opacity-90"></p>
         </div>
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
         {/* Statistics Panel */}
         <section>
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">📊 Journey Statistics</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-6">📊 Statistiques</h2>
           <StatsPanel />
         </section>
 
         {/* Live Map */}
         <section>
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">🗺️ Live Location Tracker</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-6">🗺️ Position en direct</h2>
           <LiveMap />
         </section>
 

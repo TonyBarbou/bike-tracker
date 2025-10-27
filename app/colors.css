@@ -33,7 +33,7 @@
   --text-tertiary: #6b7280;          /* rgb(107, 114, 128) - Tailwind gray-500 */
   --text-muted: #9ca3af;             /* rgb(156, 163, 175) - Tailwind gray-400 */
   --text-white: #ffffff;             /* Pure white */
-  --text-inverse-primary: #ededed;   /* Light gray for dark backgrounds */
+  --text-inverse-primary: lab(47.29% -0.79 -6.55);   /* Light gray for dark backgrounds */
   --text-inverse-secondary: #d1d5db; /* Tailwind gray-300 */
 
   /* ========================================
