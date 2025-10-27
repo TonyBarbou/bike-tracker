@@ -183,7 +183,7 @@ export default function Home() {
       <div className="hidden md:block">
         <Navigation />
       </div>
-      <main className="min-h-screen md:bg-gradient-to-b md:from-gray-50 md:to-gray-100">
+      <main className="h-screen md:min-h-screen md:bg-gradient-to-b md:from-gray-50 md:to-gray-100">
       {/* Hero Section */}
       <section className="hidden md:block bg-gradient-to-r from-red-600 to-orange-600 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
