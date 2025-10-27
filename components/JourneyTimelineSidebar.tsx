@@ -225,32 +225,12 @@ export default function JourneyTimelineSidebar({
                         <div className="md:hidden mt-2">
                           {day.posts.length > 0 && (
                             <div className="flex items-center gap-1">
-                              <span className="text-[10px] text-gray-500">
-                                {day.posts.length} post{day.posts.length > 1 ? 's' : ''}
-                              </span>
-                              <div className="flex gap-1 flex-wrap">
-                                {day.posts.map((post, postIdx) => (
-                                  <button
-                                    key={postIdx}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onSelectPost(post);
-                                    }}
-                                    className="w-2 h-2 rounded-full bg-blue-500 cursor-pointer hover:scale-125 transition-transform"
-                                    title={post.title}
-                                  />
-                                ))}
-                              </div>
+
                             </div>
                           )}
                         </div>
                       </div>
                     </div>
-
-                    {/* Connector line - not for last item */}
-                    {idx < dayData.filter(d => d.stage).length - 1 && (
-                      <div className="absolute left-[30px] top-[60px] w-0.5 h-4 bg-gray-200"></div>
-                    )}
                   </div>
                 );
               })}

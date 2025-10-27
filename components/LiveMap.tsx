@@ -623,45 +623,61 @@ export default function LiveMap({
 
       // Remove existing route if any
       if (map.current.getSource('route')) {
-        map.current.removeLayer('route');
-        map.current.removeSource('route');
+        try {
+          map.current.removeLayer('route');
+          map.current.removeSource('route');
+          console.log('🗑️ Removed existing location history route');
+        } catch (e) {
+          console.warn('Could not remove existing route:', e);
+        }
       }
 
-      // Add route line
-      map.current.addSource('route', {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: coordinates,
+      try {
+        // Add route line
+        map.current.addSource('route', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: coordinates,
+            },
           },
-        },
-      });
+        });
 
-      map.current.addLayer({
-        id: 'route',
-        type: 'line',
-        source: 'route',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-        },
-        paint: {
-          'line-color': mapColors.livePosition,
-          'line-width': 4,
-          'line-opacity': 0.8,
-        },
-      });
+        map.current.addLayer({
+          id: 'route',
+          type: 'line',
+          source: 'route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+          },
+          paint: {
+            'line-color': mapColors.livePosition,
+            'line-width': 4,
+            'line-opacity': 0.8,
+          },
+        });
+
+        console.log(`✅ Added location history route with ${coordinates.length} points`);
+      } catch (error) {
+        console.error('❌ Error adding location history route:', error);
+      }
     };
 
-    // If map is already loaded, add route immediately
-    if (map.current.loaded()) {
-      addRouteToMap();
+    // Ensure map AND style are fully loaded before adding route
+    // This is critical for reliability - layers can only be added when style is ready
+    if (!map.current.isStyleLoaded()) {
+      console.log('⏳ Waiting for map style to load before adding location history route...');
+      map.current.once('styledata', () => {
+        console.log('✅ Map style loaded, adding location history route now');
+        addRouteToMap();
+      });
     } else {
-      // Wait for map to load before adding source and layer
-      map.current.once('load', addRouteToMap);
+      // Style is already loaded, add route immediately
+      addRouteToMap();
     }
   };
 

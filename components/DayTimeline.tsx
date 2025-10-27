@@ -109,35 +109,15 @@ export default function DayTimeline() {
           });
         });
 
-        // Convert to array and sort: today first, then past (newest to oldest), then future (oldest to newest)
+        // Convert to array and sort chronologically (oldest to newest)
         const sortedDays = Array.from(daysMap.entries())
           .sort((a, b) => {
             // Always put 'no-stage' at the end
             if (a[0] === 'no-stage') return 1;
             if (b[0] === 'no-stage') return -1;
             
-            const aData = a[1];
-            const bData = b[1];
-            
-            // Today comes first
-            if (aData.isToday && !bData.isToday) return -1;
-            if (!aData.isToday && bData.isToday) return 1;
-            
-            // Both are past - sort reverse chronological (newest first)
-            if (aData.isPast && bData.isPast) {
-              return b[0].localeCompare(a[0]);
-            }
-            
-            // Both are future - sort chronological (oldest/nearest first)
-            if (aData.isFuture && bData.isFuture) {
-              return a[0].localeCompare(b[0]);
-            }
-            
-            // Past comes before future
-            if (aData.isPast && bData.isFuture) return -1;
-            if (aData.isFuture && bData.isPast) return 1;
-            
-            return 0;
+            // Sort chronologically by date
+            return a[0].localeCompare(b[0]);
           })
           .map(([_, data]) => data);
 
@@ -168,24 +148,8 @@ export default function DayTimeline() {
     <>
       <div className="space-y-6">
         {dayData.map((day, idx) => {
-          // Check if this is the first upcoming day to add a separator
-          const isFirstUpcoming = day.isFuture && (idx === 0 || !dayData[idx - 1]?.isFuture);
-          
           return (
-            <div key={idx}>
-              {/* Upcoming Days Section Header */}
-              {isFirstUpcoming && (
-                <div className="bg-blue-100 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg">
-                  <h2 className="text-xl font-bold text-blue-900 flex items-center gap-2">
-                    <span>📅</span>
-                    <span>Upcoming Days</span>
-                  </h2>
-                  <p className="text-sm text-blue-700 mt-1">
-                    These stages are scheduled for the coming days
-                  </p>
-                </div>
-              )}
-              
+            <div key={idx} className={day.isPast ? 'opacity-60' : ''}>
               <div className={`bg-white rounded-lg shadow-lg overflow-hidden ${
                 day.isToday ? 'ring-4 ring-orange-400' : ''
               }`}>
