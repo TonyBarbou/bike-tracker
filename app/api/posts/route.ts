@@ -4,7 +4,7 @@ import { postQueries } from '@/lib/db';
 // GET - Retrieve all posts
 export async function GET() {
   try {
-    const posts = postQueries.getAllPosts.all();
+    const posts = await postQueries.getAllPosts();
     
     // Parse images JSON string back to array
     const postsWithImages = posts.map((post: any) => ({
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     // Convert images array to JSON string for storage
     const imagesJson = images ? JSON.stringify(images) : null;
 
-    const result = postQueries.insertPost.run(
+    const result = await postQueries.insertPost(
       title,
       content,
       latitude || null,
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      id: result.lastInsertRowid 
+      id: result[0]?.id 
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating post:', error);

@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Insert location into database
-    locationQueries.insertLocation.run(
+    await locationQueries.insertLocation(
       tst || Math.floor(Date.now() / 1000),
       lat,
       lon,
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 // GET - Retrieve current location
 export async function GET() {
   try {
-    const location = locationQueries.getCurrentLocation.get();
+    const location = await locationQueries.getCurrentLocation();
     
     if (!location) {
       return NextResponse.json(

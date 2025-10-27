@@ -4,7 +4,7 @@ import { locationQueries } from '@/lib/db';
 // GET - Retrieve location history
 export async function GET() {
   try {
-    const locations = locationQueries.getLocationHistory.all();
+    const locations = await locationQueries.getLocationHistory();
     
     return NextResponse.json(locations);
   } catch (error) {
