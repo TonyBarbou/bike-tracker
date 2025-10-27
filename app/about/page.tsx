@@ -1,8 +1,11 @@
 import Link from 'next/link';
+import Navigation from '@/components/Navigation';
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+    <>
+      <Navigation />
+      <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       {/* Header */}
       <header className="bg-gradient-to-r from-red-600 to-orange-600 text-white py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -167,5 +170,6 @@ export default function AboutPage() {
         </div>
       </footer>
     </main>
+    </>
   );
 }

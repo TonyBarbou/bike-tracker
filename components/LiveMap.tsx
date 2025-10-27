@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { map as mapColors, text as textColors, overlay as overlayColors } from '@/lib/colors';
 
 interface Location {
   latitude: number;
@@ -127,112 +128,162 @@ export default function LiveMap() {
         }
       });
 
-      // Categorize stages
-      const completedStages = stages.filter(s => s.date < today && s.route_coordinates && s.route_coordinates.length > 0);
-      const todayStages = stages.filter(s => s.date === today && s.route_coordinates && s.route_coordinates.length > 0);
-      const futureStages = stages.filter(s => s.date > today && s.route_coordinates && s.route_coordinates.length > 0);
+      // Helper function to validate route coordinates
+      const hasValidRouteCoordinates = (stage: Stage): boolean => {
+        if (!stage.route_coordinates) {
+          console.warn(`Stage "${stage.name}" (${stage.date}) has no route_coordinates`);
+          return false;
+        }
+        
+        if (!Array.isArray(stage.route_coordinates)) {
+          console.warn(`Stage "${stage.name}" (${stage.date}) route_coordinates is not an array:`, typeof stage.route_coordinates);
+          return false;
+        }
+        
+        if (stage.route_coordinates.length === 0) {
+          console.warn(`Stage "${stage.name}" (${stage.date}) has empty route_coordinates array`);
+          return false;
+        }
+
+        // Validate that coordinates have required properties
+        const firstCoord = stage.route_coordinates[0];
+        if (!firstCoord || typeof firstCoord.lon !== 'number' || typeof firstCoord.lat !== 'number') {
+          console.warn(`Stage "${stage.name}" (${stage.date}) has invalid coordinate format:`, firstCoord);
+          return false;
+        }
+
+        return true;
+      };
+
+      // Categorize stages with validation
+      const completedStages = stages.filter(s => s.date < today && hasValidRouteCoordinates(s));
+      const todayStages = stages.filter(s => s.date === today && hasValidRouteCoordinates(s));
+      const futureStages = stages.filter(s => s.date > today && hasValidRouteCoordinates(s));
+
+      console.log(`Stages categorized - Completed: ${completedStages.length}, Today: ${todayStages.length}, Future: ${futureStages.length}`);
 
       // Add completed routes (gray/green)
       if (completedStages.length > 0) {
-        const completedCoordinates = completedStages.flatMap(stage => 
-          stage.route_coordinates.map((coord: any) => [coord.lon, coord.lat])
-        );
+        try {
+          const completedCoordinates = completedStages.flatMap(stage => 
+            stage.route_coordinates.map((coord: any) => [coord.lon, coord.lat])
+          );
 
-        map.current!.addSource('planned-completed', {
-          type: 'geojson',
-          data: {
-            type: 'Feature',
-            properties: {},
-            geometry: {
-              type: 'LineString',
-              coordinates: completedCoordinates,
-            },
-          },
-        });
+          if (completedCoordinates.length > 0) {
+            map.current!.addSource('planned-completed', {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'LineString',
+                  coordinates: completedCoordinates,
+                },
+              },
+            });
 
-        map.current!.addLayer({
-          id: 'planned-route-completed',
-          type: 'line',
-          source: 'planned-completed',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-          },
-          paint: {
-            'line-color': '#9ca3af',
-            'line-width': 3,
-            'line-opacity': 0.6,
-          },
-        });
+            map.current!.addLayer({
+              id: 'planned-route-completed',
+              type: 'line',
+              source: 'planned-completed',
+              layout: {
+                'line-join': 'round',
+                'line-cap': 'round',
+              },
+              paint: {
+                'line-color': mapColors.routePlanned,
+                'line-width': 3,
+                'line-opacity': 0.6,
+              },
+            });
+            console.log(`Added ${completedStages.length} completed stage routes to map`);
+          }
+        } catch (error) {
+          console.error('Error adding completed routes to map:', error);
+        }
       }
 
       // Add today's route (orange/yellow)
       if (todayStages.length > 0) {
-        const todayCoordinates = todayStages.flatMap(stage => 
-          stage.route_coordinates.map((coord: any) => [coord.lon, coord.lat])
-        );
+        try {
+          const todayCoordinates = todayStages.flatMap(stage => 
+            stage.route_coordinates.map((coord: any) => [coord.lon, coord.lat])
+          );
 
-        map.current!.addSource('planned-today', {
-          type: 'geojson',
-          data: {
-            type: 'Feature',
-            properties: {},
-            geometry: {
-              type: 'LineString',
-              coordinates: todayCoordinates,
-            },
-          },
-        });
+          if (todayCoordinates.length > 0) {
+            map.current!.addSource('planned-today', {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'LineString',
+                  coordinates: todayCoordinates,
+                },
+              },
+            });
 
-        map.current!.addLayer({
-          id: 'planned-route-today',
-          type: 'line',
-          source: 'planned-today',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-          },
-          paint: {
-            'line-color': '#f59e0b',
-            'line-width': 4,
-            'line-opacity': 0.8,
-          },
-        });
+            map.current!.addLayer({
+              id: 'planned-route-today',
+              type: 'line',
+              source: 'planned-today',
+              layout: {
+                'line-join': 'round',
+                'line-cap': 'round',
+              },
+              paint: {
+                'line-color': mapColors.routeCompleted,
+                'line-width': 4,
+                'line-opacity': 0.8,
+              },
+            });
+            console.log(`Added ${todayStages.length} today's stage routes to map`);
+          }
+        } catch (error) {
+          console.error('Error adding today\'s routes to map:', error);
+        }
       }
 
       // Add future routes (blue dashed)
       if (futureStages.length > 0) {
-        const futureCoordinates = futureStages.flatMap(stage => 
-          stage.route_coordinates.map((coord: any) => [coord.lon, coord.lat])
-        );
+        try {
+          const futureCoordinates = futureStages.flatMap(stage => 
+            stage.route_coordinates.map((coord: any) => [coord.lon, coord.lat])
+          );
 
-        map.current!.addSource('planned-future', {
-          type: 'geojson',
-          data: {
-            type: 'Feature',
-            properties: {},
-            geometry: {
-              type: 'LineString',
-              coordinates: futureCoordinates,
-            },
-          },
-        });
+          if (futureCoordinates.length > 0) {
+            map.current!.addSource('planned-future', {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'LineString',
+                  coordinates: futureCoordinates,
+                },
+              },
+            });
 
-        map.current!.addLayer({
-          id: 'planned-route-future',
-          type: 'line',
-          source: 'planned-future',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-          },
-          paint: {
-            'line-color': '#3b82f6',
-            'line-width': 3,
-            'line-opacity': 0.7,
-            'line-dasharray': [2, 2],
-          },
-        });
+            map.current!.addLayer({
+              id: 'planned-route-future',
+              type: 'line',
+              source: 'planned-future',
+              layout: {
+                'line-join': 'round',
+                'line-cap': 'round',
+              },
+              paint: {
+                'line-color': mapColors.routeGpx,
+                'line-width': 3,
+                'line-opacity': 0.7,
+                'line-dasharray': [2, 2],
+              },
+            });
+            console.log(`Added ${futureStages.length} future stage routes to map`);
+          }
+        } catch (error) {
+          console.error('Error adding future routes to map:', error);
+        }
       }
     };
 
@@ -293,11 +344,11 @@ export default function LiveMap() {
         const popup = new mapboxgl.Popup({ offset: 25, maxWidth: '300px' })
           .setHTML(`
             <div style="padding: 12px;">
-              <h3 style="margin: 0 0 8px 0; font-weight: bold; font-size: 16px; color: #1f2937;">${post.title}</h3>
-              ${post.location_name ? `<p style="margin: 0 0 8px 0; font-size: 12px; color: #6b7280;"><strong>📍 ${post.location_name}</strong></p>` : ''}
-              <p style="margin: 0 0 8px 0; font-size: 14px; color: #374151; line-height: 1.5;">${post.content.substring(0, 150)}${post.content.length > 150 ? '...' : ''}</p>
+              <h3 style="margin: 0 0 8px 0; font-weight: bold; font-size: 16px; color: ${mapColors.popup.heading};">${post.title}</h3>
+              ${post.location_name ? `<p style="margin: 0 0 8px 0; font-size: 12px; color: ${mapColors.popup.muted};"><strong>📍 ${post.location_name}</strong></p>` : ''}
+              <p style="margin: 0 0 8px 0; font-size: 14px; color: ${mapColors.popup.text}; line-height: 1.5;">${post.content.substring(0, 150)}${post.content.length > 150 ? '...' : ''}</p>
               ${imagesHtml}
-              <p style="margin: 8px 0 0 0; font-size: 12px; color: #9ca3af;">${formattedDate}</p>
+              <p style="margin: 8px 0 0 0; font-size: 12px; color: ${mapColors.popup.meta};">${formattedDate}</p>
             </div>
           `);
 
@@ -414,7 +465,7 @@ export default function LiveMap() {
           'line-cap': 'round',
         },
         paint: {
-          'line-color': '#ef4444',
+          'line-color': mapColors.livePosition,
           'line-width': 4,
           'line-opacity': 0.8,
         },
@@ -463,6 +514,27 @@ export default function LiveMap() {
               </div>
             )}
             <div className="pt-2 mt-2 border-t border-gray-200">
+              <div className="mb-2">
+                <p className="text-gray-700 font-semibold text-[10px] mb-1">Map Legend:</p>
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-4 h-0.5 rounded" style={{ backgroundColor: mapColors.livePosition }}></div>
+                    <span className="text-gray-600 text-[9px]">Live Route</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-4 h-0.5 rounded" style={{ backgroundColor: mapColors.routeCompleted }}></div>
+                    <span className="text-gray-600 text-[9px]">Today's Route</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-4 h-0.5 rounded border-t-2 border-dashed" style={{ borderColor: mapColors.routeGpx }}></div>
+                    <span className="text-gray-600 text-[9px]">Future Routes</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-4 h-0.5 rounded opacity-60" style={{ backgroundColor: mapColors.routePlanned }}></div>
+                    <span className="text-gray-600 text-[9px]">Past Routes</span>
+                  </div>
+                </div>
+              </div>
               <span className="text-gray-500 text-[10px]">
                 Updated: {currentLocation.timestamp ? new Date(currentLocation.timestamp * 1000).toLocaleTimeString() : 'N/A'}
               </span>

@@ -1,0 +1,140 @@
+/**
+ * Color Variables for Bike Tracker
+ * Organized by usage category for easy customization
+ */
+
+:root {
+  /* ========================================
+     BRAND COLORS
+     Main brand identity colors used throughout
+     ======================================== */
+  --brand-primary-red: #dc2626;      /* rgb(220, 38, 38) - Tailwind red-600 */
+  --brand-primary-orange: #ea580c;   /* rgb(234, 88, 12) - Tailwind orange-600 */
+  --brand-accent-red: #ef4444;       /* rgb(239, 68, 68) - Tailwind red-500 */
+  --brand-accent-orange: #f97316;    /* rgb(249, 115, 22) - Tailwind orange-500 */
+
+  /* ========================================
+     BACKGROUND COLORS
+     Page and component backgrounds
+     ======================================== */
+  --bg-primary: #ffffff;             /* Pure white */
+  --bg-secondary: #f9fafb;           /* rgb(249, 250, 251) - Tailwind gray-50 */
+  --bg-tertiary: #f3f4f6;            /* rgb(243, 244, 246) - Tailwind gray-100 */
+  --bg-muted: #e5e7eb;               /* rgb(229, 231, 235) - Tailwind gray-200 */
+  --bg-dark: #1f2937;                /* rgb(31, 41, 55) - Tailwind gray-800 */
+  --bg-darker: #0a0a0a;              /* Almost black */
+
+  /* ========================================
+     TEXT COLORS
+     Typography and content colors
+     ======================================== */
+  --text-primary: #111827;           /* rgb(17, 24, 39) - Tailwind gray-900 */
+  --text-secondary: #4b5563;         /* rgb(75, 85, 99) - Tailwind gray-600 */
+  --text-tertiary: #6b7280;          /* rgb(107, 114, 128) - Tailwind gray-500 */
+  --text-muted: #9ca3af;             /* rgb(156, 163, 175) - Tailwind gray-400 */
+  --text-white: #ffffff;             /* Pure white */
+  --text-inverse-primary: #ededed;   /* Light gray for dark backgrounds */
+  --text-inverse-secondary: #d1d5db; /* Tailwind gray-300 */
+
+  /* ========================================
+     STATUS & STATE COLORS
+     Success, warning, error, info states
+     ======================================== */
+  /* Success/Green states */
+  --status-success-bg: #dcfce7;      /* rgb(220, 252, 231) - Tailwind green-100 */
+  --status-success-text: #166534;    /* rgb(22, 101, 52) - Tailwind green-800 */
+  --status-success-border: #22c55e;  /* rgb(34, 197, 94) - Tailwind green-500 */
+  --status-success-button: #16a34a;  /* rgb(22, 163, 74) - Tailwind green-600 */
+  --status-success-button-hover: #15803d; /* rgb(21, 128, 61) - Tailwind green-700 */
+
+  /* Warning/Yellow states */
+  --status-warning-bg: #fef3c7;      /* rgb(254, 243, 199) - Tailwind yellow-100 */
+  --status-warning-text: #92400e;    /* rgb(146, 64, 14) - Tailwind yellow-800 */
+  --status-warning-border: #fbbf24;  /* rgb(251, 191, 36) - Tailwind yellow-400 */
+  --status-warning-light-bg: #fffbeb; /* rgb(255, 251, 235) - Tailwind yellow-50 */
+  --status-warning-light-border: #fef3c7; /* Tailwind yellow-100 */
+  --status-warning-button: #ca8a04;  /* rgb(202, 138, 4) - Tailwind yellow-600 */
+  --status-warning-button-hover: #a16207; /* rgb(161, 98, 7) - Tailwind yellow-700 */
+
+  /* Error/Red states */
+  --status-error-bg: #fee2e2;        /* rgb(254, 226, 226) - Tailwind red-100 */
+  --status-error-text: #991b1b;      /* rgb(153, 27, 27) - Tailwind red-800 */
+  --status-error-border: #ef4444;    /* rgb(239, 68, 68) - Tailwind red-500 */
+  --status-error-button: #dc2626;    /* rgb(220, 38, 38) - Tailwind red-600 */
+  --status-error-button-hover: #b91c1c; /* rgb(185, 28, 28) - Tailwind red-700 */
+
+  /* Info/Blue states */
+  --status-info-bg: #dbeafe;         /* rgb(219, 234, 254) - Tailwind blue-100 */
+  --status-info-text: #1e3a8a;       /* rgb(30, 58, 138) - Tailwind blue-900 */
+  --status-info-border: #3b82f6;     /* rgb(59, 130, 246) - Tailwind blue-500 */
+  --status-info-light-bg: #eff6ff;   /* rgb(239, 246, 255) - Tailwind blue-50 */
+  --status-info-light-border: #dbeafe; /* Tailwind blue-100 */
+  --status-info-button: #2563eb;     /* rgb(37, 99, 235) - Tailwind blue-600 */
+  --status-info-button-hover: #1d4ed8; /* rgb(29, 78, 216) - Tailwind blue-700 */
+
+  /* ========================================
+     BORDER COLORS
+     Borders, dividers, and outlines
+     ======================================== */
+  --border-light: #f3f4f6;           /* rgb(243, 244, 246) - Tailwind gray-100 */
+  --border-default: #e5e7eb;         /* rgb(229, 231, 235) - Tailwind gray-200 */
+  --border-medium: #d1d5db;          /* rgb(209, 213, 219) - Tailwind gray-300 */
+  --border-dark: #9ca3af;            /* rgb(156, 163, 175) - Tailwind gray-400 */
+  --border-focus: #ef4444;           /* rgb(239, 68, 68) - Tailwind red-500 for focus states */
+
+  /* ========================================
+     TIMELINE & DAY COLORS
+     Specific to journey timeline
+     ======================================== */
+  --timeline-past-bg: #f9fafb;       /* rgb(249, 250, 251) - Tailwind gray-50 */
+  --timeline-past-border: #9ca3af;   /* rgb(156, 163, 175) - Tailwind gray-400 */
+  --timeline-today-bg: #fff7ed;      /* rgb(255, 247, 237) - Tailwind orange-50 */
+  --timeline-today-border: #f97316;  /* rgb(249, 115, 22) - Tailwind orange-500 */
+  --timeline-today-ring: #fb923c;    /* rgb(251, 146, 60) - Tailwind orange-400 */
+  --timeline-today-badge-bg: #f97316; /* Tailwind orange-500 */
+  --timeline-future-bg: #eff6ff;     /* rgb(239, 246, 255) - Tailwind blue-50 */
+  --timeline-future-border: #3b82f6; /* rgb(59, 130, 246) - Tailwind blue-500 */
+
+  /* ========================================
+     MAP COLORS
+     Mapbox visualization colors
+     ======================================== */
+  --map-route-planned: #9ca3af;      /* rgb(156, 163, 175) - Gray for planned route */
+  --map-route-completed: #f59e0b;    /* rgb(245, 158, 11) - Amber for completed route */
+  --map-gpx-route: #d90e0e;          /* rgb(59, 130, 246) - Blue for GPX tracks */
+  --map-live-position: #ef4444;      /* rgb(239, 68, 68) - Red for current position */
+  --map-popup-heading: #1f2937;      /* rgb(31, 41, 55) - Tailwind gray-800 */
+  --map-popup-text: #374151;         /* rgb(55, 65, 81) - Tailwind gray-700 */
+  --map-popup-muted: #6b7280;        /* rgb(107, 114, 128) - Tailwind gray-500 */
+  --map-popup-meta: #9ca3af;         /* rgb(156, 163, 175) - Tailwind gray-400 */
+
+  /* ========================================
+     SPECIAL EFFECTS
+     Overlays, shadows, and transparency
+     ======================================== */
+  --overlay-dark: rgba(0, 0, 0, 0.9);     /* Black overlay for lightbox */
+  --overlay-medium: rgba(0, 0, 0, 0.5);   /* Semi-transparent black */
+  --overlay-hover: rgba(0, 0, 0, 0.75);   /* Darker on hover */
+  --bg-white-translucent: rgba(255, 255, 255, 0.95); /* Semi-transparent white */
+  --bg-white-overlay: rgba(255, 255, 255, 0.5);      /* Light white overlay */
+  --bg-white-backdrop: rgba(255, 255, 255, 0.8);     /* White with backdrop blur */
+}
+
+/* ========================================
+   DARK MODE OVERRIDES
+   Automatic dark mode support
+   ======================================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Swap backgrounds for dark mode */
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #171717;
+    --bg-tertiary: #1f2937;
+    --bg-dark: #f9fafb;
+    
+    /* Swap text colors for dark mode */
+    --text-primary: #ededed;
+    --text-secondary: #d1d5db;
+    --text-white: #0a0a0a;
+  }
+}
