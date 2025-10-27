@@ -205,7 +205,7 @@ export default function Home() {
           <h2 className="hidden md:block text-3xl font-bold text-gray-900 mb-6">🗺️ Position en direct</h2>
           <div className="flex flex-col md:flex-row md:gap-0 relative h-screen md:h-auto">
             {/* Map Container */}
-            <div className="w-full md:w-[70%] relative h-full md:h-[600px]">
+            <div className="w-full md:w-[70%] relative h-[60vh] md:h-[600px]">
               <LiveMap 
                 selectedDay={selectedDay}
                 selectedPost={selectedPost}

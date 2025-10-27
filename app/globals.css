@@ -27,11 +27,18 @@ body {
 }
 
 /* Prevent scroll on mobile - only timeline sidebar should scroll */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   html, body {
     overflow: hidden;
     height: 100vh;
-    position: fixed;
     width: 100%;
+  }
+  
+  body {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
   }
 }
