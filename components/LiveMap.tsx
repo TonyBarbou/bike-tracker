@@ -10,6 +10,8 @@ interface Location {
   timestamp: number;
   altitude?: number;
   speed?: number;
+  battery?: number;
+  accuracy?: number;
 }
 
 interface Post {
@@ -21,6 +23,15 @@ interface Post {
   location_name: string | null;
   images: string[];
   created_at: string;
+}
+
+interface Stage {
+  id: number;
+  date: string;
+  day_number: number | null;
+  name: string;
+  route_coordinates: any[];
+  status: string;
 }
 
 export default function LiveMap() {
@@ -78,6 +89,13 @@ export default function LiveMap() {
         drawRoute(history);
       }
 
+      // Fetch and display planned routes
+      const stagesRes = await fetch('/api/stages');
+      if (stagesRes.ok) {
+        const stages = await stagesRes.json();
+        drawPlannedRoutes(stages);
+      }
+
       // Fetch and display posts
       const postsRes = await fetch('/api/posts');
       if (postsRes.ok) {
@@ -86,6 +104,144 @@ export default function LiveMap() {
       }
     } catch (error) {
       console.error('Error fetching location data:', error);
+    }
+  };
+
+  const drawPlannedRoutes = (stages: Stage[]) => {
+    if (!map.current || stages.length === 0) return;
+
+    const today = new Date().toISOString().split('T')[0];
+
+    const addPlannedRoutesToMap = () => {
+      if (!map.current) return;
+
+      // Remove existing planned routes if any
+      ['planned-route-completed', 'planned-route-today', 'planned-route-future'].forEach(layerId => {
+        if (map.current!.getLayer(layerId)) {
+          map.current!.removeLayer(layerId);
+        }
+      });
+      ['planned-completed', 'planned-today', 'planned-future'].forEach(sourceId => {
+        if (map.current!.getSource(sourceId)) {
+          map.current!.removeSource(sourceId);
+        }
+      });
+
+      // Categorize stages
+      const completedStages = stages.filter(s => s.date < today && s.route_coordinates && s.route_coordinates.length > 0);
+      const todayStages = stages.filter(s => s.date === today && s.route_coordinates && s.route_coordinates.length > 0);
+      const futureStages = stages.filter(s => s.date > today && s.route_coordinates && s.route_coordinates.length > 0);
+
+      // Add completed routes (gray/green)
+      if (completedStages.length > 0) {
+        const completedCoordinates = completedStages.flatMap(stage => 
+          stage.route_coordinates.map((coord: any) => [coord.lon, coord.lat])
+        );
+
+        map.current!.addSource('planned-completed', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: completedCoordinates,
+            },
+          },
+        });
+
+        map.current!.addLayer({
+          id: 'planned-route-completed',
+          type: 'line',
+          source: 'planned-completed',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+          },
+          paint: {
+            'line-color': '#9ca3af',
+            'line-width': 3,
+            'line-opacity': 0.6,
+          },
+        });
+      }
+
+      // Add today's route (orange/yellow)
+      if (todayStages.length > 0) {
+        const todayCoordinates = todayStages.flatMap(stage => 
+          stage.route_coordinates.map((coord: any) => [coord.lon, coord.lat])
+        );
+
+        map.current!.addSource('planned-today', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: todayCoordinates,
+            },
+          },
+        });
+
+        map.current!.addLayer({
+          id: 'planned-route-today',
+          type: 'line',
+          source: 'planned-today',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+          },
+          paint: {
+            'line-color': '#f59e0b',
+            'line-width': 4,
+            'line-opacity': 0.8,
+          },
+        });
+      }
+
+      // Add future routes (blue dashed)
+      if (futureStages.length > 0) {
+        const futureCoordinates = futureStages.flatMap(stage => 
+          stage.route_coordinates.map((coord: any) => [coord.lon, coord.lat])
+        );
+
+        map.current!.addSource('planned-future', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: futureCoordinates,
+            },
+          },
+        });
+
+        map.current!.addLayer({
+          id: 'planned-route-future',
+          type: 'line',
+          source: 'planned-future',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+          },
+          paint: {
+            'line-color': '#3b82f6',
+            'line-width': 3,
+            'line-opacity': 0.7,
+            'line-dasharray': [2, 2],
+          },
+        });
+      }
+    };
+
+    // If map is already loaded, add routes immediately
+    if (map.current.loaded()) {
+      addPlannedRoutesToMap();
+    } else {
+      // Wait for map to load before adding routes
+      map.current.once('load', addPlannedRoutesToMap);
     }
   };
 
@@ -278,20 +434,42 @@ export default function LiveMap() {
     <>
       <div className="relative w-full h-[600px] rounded-lg overflow-hidden shadow-xl">
         <div ref={mapContainer} className="w-full h-full" />
-        {currentLocation && (
-          <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm p-4 rounded-lg shadow-lg">
-            <h3 className="font-bold text-sm mb-2">Live Location</h3>
-            <p className="text-xs text-gray-600">
-              {currentLocation.speed && (
-                <>Speed: {Math.round(currentLocation.speed * 3.6)} km/h<br /></>
-              )}
-              {currentLocation.altitude && (
-                <>Altitude: {Math.round(currentLocation.altitude)}m<br /></>
-              )}
-              Updated: {currentLocation.timestamp ? new Date(currentLocation.timestamp * 1000).toLocaleTimeString() : 'N/A'}
-            </p>
+      {currentLocation && (
+        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm p-4 rounded-lg shadow-lg min-w-[200px]">
+          <h3 className="font-bold text-sm mb-3 text-gray-900">📍 Live Location</h3>
+          <div className="space-y-1 text-xs">
+            {currentLocation.speed !== undefined && currentLocation.speed !== null && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Speed:</span>
+                <span className="font-semibold text-gray-900">{Math.round(currentLocation.speed * 3.6)} km/h</span>
+              </div>
+            )}
+            {currentLocation.altitude !== undefined && currentLocation.altitude !== null && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Altitude:</span>
+                <span className="font-semibold text-gray-900">{Math.round(currentLocation.altitude)}m</span>
+              </div>
+            )}
+            {currentLocation.battery !== undefined && currentLocation.battery !== null && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Battery:</span>
+                <span className="font-semibold text-gray-900">{currentLocation.battery}%</span>
+              </div>
+            )}
+            {currentLocation.accuracy !== undefined && currentLocation.accuracy !== null && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Accuracy:</span>
+                <span className="font-semibold text-gray-900">{Math.round(currentLocation.accuracy)}m</span>
+              </div>
+            )}
+            <div className="pt-2 mt-2 border-t border-gray-200">
+              <span className="text-gray-500 text-[10px]">
+                Updated: {currentLocation.timestamp ? new Date(currentLocation.timestamp * 1000).toLocaleTimeString() : 'N/A'}
+              </span>
+            </div>
           </div>
-        )}
+        </div>
+      )}
       </div>
 
       {/* Image Lightbox Overlay */}

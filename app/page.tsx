@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Navigation from '@/components/Navigation';
 import StatsPanel from '@/components/StatsPanel';
-import LiveFeed from '@/components/LiveFeed';
+import DayTimeline from '@/components/DayTimeline';
 import DonationSection from '@/components/DonationSection';
 
 // Dynamically import map to avoid SSR issues
@@ -48,10 +48,10 @@ export default function Home() {
           <DonationSection />
         </section>
 
-        {/* Live Feed */}
+        {/* Journey Timeline */}
         <section>
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">📝 Journey Updates</h2>
-          <LiveFeed />
+          <h2 className="text-3xl font-bold text-gray-900 mb-6">📅 Journey Timeline</h2>
+          <DayTimeline />
         </section>
       </div>
 

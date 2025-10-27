@@ -96,7 +96,9 @@ export const postQueries = {
     latitude: number | null,
     longitude: number | null,
     location_name: string | null,
-    images: string | null
+    images: string | null,
+    stage_date: string | null = null,
+    time_of_day: string | null = null
   ) {
     const { data, error } = await supabase
       .from('posts')
@@ -107,6 +109,8 @@ export const postQueries = {
         longitude,
         location_name,
         images,
+        stage_date,
+        time_of_day,
       })
       .select();
 
@@ -135,12 +139,23 @@ export const postQueries = {
     return data;
   },
 
-  async updatePost(id: number, title: string, content: string) {
+  async updatePost(
+    id: number,
+    updates: {
+      title?: string;
+      content?: string;
+      latitude?: number | null;
+      longitude?: number | null;
+      location_name?: string | null;
+      images?: string | null;
+      stage_date?: string | null;
+      time_of_day?: string | null;
+    }
+  ) {
     const { data, error } = await supabase
       .from('posts')
       .update({
-        title,
-        content,
+        ...updates,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -157,6 +172,128 @@ export const postQueries = {
       .eq('id', id);
 
     if (error) throw error;
+  },
+};
+
+// Stage operations
+export const stageQueries = {
+  async insertStage(
+    date: string,
+    day_number: number | null,
+    name: string,
+    planned_distance_km: number,
+    planned_elevation_gain_m: number,
+    gpx_data: string | null,
+    route_coordinates: any | null,
+    waypoints: any | null,
+    start_location: string | null,
+    end_location: string | null,
+    notes: string | null,
+    status: string = 'pending'
+  ) {
+    const { data, error } = await supabase
+      .from('stages')
+      .insert({
+        date,
+        day_number,
+        name,
+        planned_distance_km,
+        planned_elevation_gain_m,
+        gpx_data,
+        route_coordinates,
+        waypoints,
+        start_location,
+        end_location,
+        notes,
+        status,
+      })
+      .select();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async getAllStages() {
+    const { data, error } = await supabase
+      .from('stages')
+      .select('*')
+      .order('date', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getStageByDate(date: string) {
+    const { data, error } = await supabase
+      .from('stages')
+      .select('*')
+      .eq('date', date)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
+  },
+
+  async getStageById(id: number) {
+    const { data, error } = await supabase
+      .from('stages')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async updateStage(
+    id: number,
+    updates: {
+      date?: string;
+      day_number?: number | null;
+      name?: string;
+      planned_distance_km?: number;
+      planned_elevation_gain_m?: number;
+      gpx_data?: string | null;
+      route_coordinates?: any | null;
+      waypoints?: any | null;
+      start_location?: string | null;
+      end_location?: string | null;
+      notes?: string | null;
+      status?: string;
+    }
+  ) {
+    const { data, error } = await supabase
+      .from('stages')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteStage(id: number) {
+    const { error } = await supabase
+      .from('stages')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async getStagesByDateRange(startDate: string, endDate: string) {
+    const { data, error } = await supabase
+      .from('stages')
+      .select('*')
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
   },
 };
 

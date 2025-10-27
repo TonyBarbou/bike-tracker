@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, latitude, longitude, location_name, images } = body;
+    const { title, content, latitude, longitude, location_name, images, stage_date, time_of_day } = body;
 
     if (!title || !content) {
       return NextResponse.json(
@@ -55,7 +55,9 @@ export async function POST(request: NextRequest) {
       latitude || null,
       longitude || null,
       location_name || null,
-      imagesJson
+      imagesJson,
+      stage_date || null,
+      time_of_day || null
     );
 
     return NextResponse.json({ 

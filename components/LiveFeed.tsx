@@ -12,7 +12,8 @@ interface Post {
   longitude?: number;
   location_name?: string;
   images?: string[];
-  created_at: number;
+  time_of_day?: string | null;
+  created_at: string | number;
 }
 
 export default function LiveFeed() {
@@ -67,51 +68,80 @@ export default function LiveFeed() {
   return (
     <>
       <div className="space-y-6">
-        {posts.map((post) => (
-          <article key={post.id} className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">{post.title}</h3>
-                {post.location_name && (
-                  <p className="text-sm text-gray-600 flex items-center gap-1">
-                    📍 {post.location_name}
-                  </p>
-                )}
-              </div>
-              <time className="text-sm text-gray-500" dateTime={typeof post.created_at === 'string' ? post.created_at : new Date(post.created_at * 1000).toISOString()}>
-                {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-              </time>
-            </div>
-            
-            <div className="prose prose-sm max-w-none text-gray-700 mb-4">
-              <ReactMarkdown>{post.content}</ReactMarkdown>
-            </div>
+        {posts.map((post) => {
+          // Get display time - use time_of_day if set, otherwise extract from created_at
+          const displayTime = post.time_of_day || (() => {
+            // Handle both timestamp (number) and ISO string formats
+            const createdDate = typeof post.created_at === 'number' 
+              ? new Date(post.created_at * 1000) 
+              : new Date(post.created_at);
+            const hours = createdDate.getHours().toString().padStart(2, '0');
+            const minutes = createdDate.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
+          })();
 
-            {post.images && post.images.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-4">
-                {post.images.map((image, idx) => (
-                  <img
-                    key={idx}
-                    src={image}
-                    alt={`${post.title} - Image ${idx + 1}`}
-                    className="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => setLightboxImage(image)}
-                  />
-                ))}
-              </div>
-            )}
+          return (
+            <article key={post.id} className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow">
+              <div className="flex items-start gap-6">
+                {/* Time indicator on the left */}
+                <div className="flex-shrink-0 text-center">
+                  <div className="text-3xl font-bold text-red-600">{displayTime}</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </div>
+                </div>
+                
+                {/* Vertical divider */}
+                <div className="w-px bg-gray-200 self-stretch"></div>
+                
+                {/* Post content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">{post.title}</h3>
+                      {post.location_name && (
+                        <p className="text-sm text-gray-600 flex items-center gap-1">
+                          📍 {post.location_name}
+                        </p>
+                      )}
+                    </div>
+                    <time className="text-sm text-gray-500 whitespace-nowrap ml-4" dateTime={typeof post.created_at === 'string' ? post.created_at : new Date(post.created_at * 1000).toISOString()}>
+                      {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                    </time>
+                  </div>
+                  
+                  <div className="prose prose-sm max-w-none text-gray-700 mb-4">
+                    <ReactMarkdown>{post.content}</ReactMarkdown>
+                  </div>
 
-            <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500">
-              Posted on {new Date(post.created_at).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </div>
-          </article>
-        ))}
+                  {post.images && post.images.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-4">
+                      {post.images.map((image, idx) => (
+                        <img
+                          key={idx}
+                          src={image}
+                          alt={`${post.title} - Image ${idx + 1}`}
+                          className="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => setLightboxImage(image)}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500">
+                    Posted on {new Date(post.created_at).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </div>
+                </div>
+              </div>
+            </article>
+          );
+        })}
       </div>
 
       {/* Image Lightbox Overlay */}
